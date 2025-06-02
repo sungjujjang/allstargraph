@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>서버 점검 중</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .container {
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      max-width: 500px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      font-size: 1.3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      color: #FFD700;
+    }
+
+    .retry-btn {
+      background-color: #FFD700;
+      color: #1e3c72;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .retry-btn:hover {
+      background-color: #f4c400;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">ALLSTAR</div>
+    <h1>서버 연결 실패</h1>
+    <p>KBO 공식 서버가 다운되어<br>서비스를 이용할 수 없습니다.<br><br>나중에 다시 시도해 주세요.</p>
+    <button class="retry-btn" onclick="location.reload()">다시 시도하기</button>
+  </div>
+</body>
+</html>

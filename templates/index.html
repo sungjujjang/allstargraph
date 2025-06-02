@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 올스타</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            text-align: center;
+            padding: 32px 24px 16px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .card-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 18px;
+            color: #6b7280;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 32px;
+        }
+
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .candidate-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            transition: box-shadow 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .candidate-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .candidate-card.candidate-1 {
+            border-left-color: {{ color[0] }};
+        }
+
+        .candidate-card.candidate-2 {
+            border-left-color: {{ color[1] }};
+        }
+
+        .candidate-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .candidate-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e5e7eb;
+        }
+
+        .candidate-details h3 {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .candidate-party {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .vote-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .candidate-1 .vote-count {
+            color: {{ color[0] }};
+        }
+
+        .candidate-2 .vote-count {
+            color: {{ color[1] }};
+        }
+
+        .vote-percentage {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .stats-summary {
+            display: flex;
+            justify-content: space-around;
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 24px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+            
+            .card-title {
+                font-size: 24px;
+            }
+            
+            .candidate-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-summary {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 메인 차트 카드 -->
+        <div class="card">
+            <div style="display: flex; justify-content: center; gap: 12px; padding: 16px; background-color: #f1f5f9; border-bottom: 1px solid #e5e7eb;">
+                <a href="/?pos={{ pos }}&dr_nm=dr" style="padding: 8px 16px; background-color: {% if dr_nm == 'dr' %}#3b82f6{% else %}#e5e7eb{% endif %}; color: {% if dr_nm == 'dr' %}white{% else %}#1f2937{% endif %}; border-radius: 6px; text-decoration: none; font-weight: bold;">드림팀</a>
+                <a href="/?pos={{ pos }}&dr_nm=nm" style="padding: 8px 16px; background-color: {% if dr_nm == 'nm' %}#3b82f6{% else %}#e5e7eb{% endif %}; color: {% if dr_nm == 'nm' %}white{% else %}#1f2937{% endif %}; border-radius: 6px; text-decoration: none; font-weight: bold;">나눔팀</a>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 12px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                {% for code, name in pos_dict.items() %}
+                    <a href="/?pos={{ code }}&dr_nm={{ dr_nm }}" style="padding: 6px 12px; background-color: {% if pos == code %}#10b981{% else %}#e2e8f0{% endif %}; color: {% if pos == code %}white{% else %}#1f2937{% endif %}; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                        {{ name }}
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="card-header">
+                <h1 class="card-description">{{ pos_text }} 부문 {{ team_text}}올스타 실시간 집계</h1>
+            </div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="electionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 후보자 정보 카드들 -->
+        <div class="candidates-grid">
+            <div class="candidate-card candidate-1">
+                <div class="candidate-info">
+                    <img src="{{ picture[0] }}" alt="{{ player[0] }}" class="candidate-photo">
+                    <div class="candidate-details">
+                        <h3>{{ player[0] }}</h3>
+                        <p class="candidate-party">{{ team[0] }}</p>
+                        <div class="vote-count">{{ vote[0] }}표</div>
+                        <div class="vote-percentage">{{ percent[0] }}%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="candidate-card candidate-2">
+                <div class="candidate-info">
+                    <img src="{{ picture[1] }}" alt="{{ player[1] }}" class="candidate-photo">
+                    <div class="candidate-details">
+                        <h3>{{ player[1] }}</h3>
+                        <p class="candidate-party">{{ team[1] }}</p>
+                        <div class="vote-count">{{ vote[1] }}표</div>
+                        <div class="vote-percentage">{{ percent[1] }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 요약 -->
+        <div class="card">
+            <div class="card-content">
+                <div class="stats-summary">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ total_vote }}표</div>
+                        <div class="stat-label">총 투표수</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ vote[0] - vote[1] }}</div>
+                        <div class="stat-label">격차</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 선거 데이터
+        const electionData = {
+            candidates: ['{{ player[0] }}', '{{ player[1] }}'],
+            votes: [{{ vote[0] }}, {{ vote[1] }}],
+            colors: ['{{ color[0] }}', '{{ color[1] }}'],
+            parties: ['{{ team[0] }}', '{{ team[1] }}'],
+        };
+
+        // 차트 설정
+        const ctx = document.getElementById('electionChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: electionData.candidates,
+                datasets: [{
+                    label: '득표수',
+                    data: electionData.votes,
+                    backgroundColor: electionData.colors.map(color => color + '20'),
+                    borderColor: electionData.colors,
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'white',
+                        titleColor: '#1f2937',
+                        bodyColor: '#6b7280',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                return `${electionData.candidates[index]} (${electionData.parties[index]})`;
+                            },
+                            label: function(context) {
+                                const votes = context.parsed.y;
+                                const total = electionData.votes.reduce((a, b) => a + b, 0);
+                                const percentage = ((votes / total) * 100).toFixed(1);
+                                return `${votes.toLocaleString()}표 (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e0e7ff',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 12
+                            },
+                            callback: function(value) {
+                                return (value / 1000).toFixed(0) + 'k';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#1f2937',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            ctx.fillStyle = '#374151';
+                            ctx.font = 'bold 14px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillText(
+                                data.toLocaleString() + '표',
+                                bar.x,
+                                bar.y - 10
+                            );
+                        });
+                    });
+                }
+            }]
+        });
+
+        // 숫자 애니메이션 효과
+        function animateNumbers() {
+            const numbers = document.querySelectorAll('.vote-count, .stat-number');
+            numbers.forEach(num => {
+                const finalValue = parseInt(num.textContent.replace(/[^0-9]/g, ''));
+                let currentValue = 0;
+                const increment = finalValue / 50;
+                const timer = setInterval(() => {
+                    currentValue += increment;
+                    if (currentValue >= finalValue) {
+                        currentValue = finalValue;
+                        clearInterval(timer);
+                    }
+                    if (num.classList.contains('vote-count')) {
+                        num.textContent = Math.floor(currentValue).toLocaleString() + '표';
+                    } else if (num.textContent.includes('%')) {
+                        num.textContent = (currentValue / 1000).toFixed(1) + '%';
+                    } else {
+                        num.textContent = Math.floor(currentValue).toLocaleString();
+                    }
+                }, 30);
+            });
+        }
+
+        // 페이지 로드 시 애니메이션 실행
+        window.addEventListener('load', () => {
+            setTimeout(animateNumbers, 500);
+        });
+    </script>
+</body>
+</html>
