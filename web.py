@@ -1,8 +1,28 @@
 from flask import Flask, render_template, redirect, request, jsonify
-import requests, json
+import requests, json, os
+from threading import Lock
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+
+lock = Lock()
+counter_file = "counter.txt"
+
+# 초기화
+if not os.path.exists(counter_file):
+    with open(counter_file, "w") as f:
+        f.write("0")
+
+def read_counter():
+    with open(counter_file, "r") as f:
+        return int(f.read())
+
+def increment_counter():
+    with lock:
+        count = read_counter() + 1
+        with open(counter_file, "w") as f:
+            f.write(str(count))
+        return count
 
 def get_first(players):
     first = {
@@ -51,6 +71,15 @@ def code_to_pos(code):
     }
     return pos_dict.get(code, code)  # 기본값: 코드 그대로 반환
 
+@app.before_request
+def count_visitors():
+    increment_counter()
+    
+@app.route("/count")
+def count_user():
+    count = read_counter()
+    return f"총 접속자 수: {count}명"
+
 @app.route('/')
 def home():
     try:
@@ -95,6 +124,59 @@ def home():
         
         print(f"총 득표수 (드림팀): {all_EA}, 총 득표수 (나눔팀): {all_WE}")
         
+        pos_dict = {
+            "C": "포수",
+            "1B": "1루수",
+            "2B": "2루수",
+            "3B": "3루수",
+            "SS": "유격수",
+            "OF": "외야수",
+            "DH": "지명타자",
+            "SP": "선발투수",
+            "MP": "구원투수",
+            "CP": "마무리투수",
+        }
+        
+        pos_text = code_to_pos(pos)
+        team_text = "드림팀" if dr_nm == "dr" else "나눔팀"
+        
+        if pos == "OF":
+            for i in range(2):
+                EA_ = get_first(EA_players)
+                del EA_players[EA_[1]]
+                WE_ = get_first(WE_players)
+                del WE_players[WE_[1]]
+                return_EA.append(EA_[0])
+                return_WE.append(WE_[0])
+            if dr_nm == "dr":
+                team = [return_EA[0]['T_NM'], return_EA[1]['T_NM'], return_EA[2]['T_NM'], return_EA[3]['T_NM']]
+                player = [return_EA[0]['P_NM'], return_EA[1]['P_NM'], return_EA[2]['P_NM'], return_EA[3]['P_NM']]
+                vote = [vote_to_int(return_EA[0]['VOTE_CN']), vote_to_int(return_EA[1]['VOTE_CN']), vote_to_int(return_EA[2]['VOTE_CN']), vote_to_int(return_EA[3]['VOTE_CN'])]
+                total = all_EA
+                percent = [round(vote_to_int(return_EA[0]['VOTE_CN']) / all_EA * 100, 2), 
+                           round(vote_to_int(return_EA[1]['VOTE_CN']) / all_EA * 100, 2),
+                           round(vote_to_int(return_EA[2]['VOTE_CN']) / all_EA * 100, 2),
+                           round(vote_to_int(return_EA[3]['VOTE_CN']) / all_EA * 100, 2)]
+                color = [team_to_color(return_EA[0]['T_NM']), team_to_color(return_EA[1]['T_NM']), team_to_color(return_EA[2]['T_NM']), team_to_color(return_EA[3]['T_NM'])]
+                picture = [pic_to_url(return_EA[0]['P_IMG_LK']), pic_to_url(return_EA[1]['P_IMG_LK']), pic_to_url(return_EA[2]['P_IMG_LK']), pic_to_url(return_EA[3]['P_IMG_LK'])]
+            else:
+                team = [return_WE[0]['T_NM'], return_WE[1]['T_NM'], return_WE[2]['T_NM'], return_WE[3]['T_NM']]
+                player = [return_WE[0]['P_NM'], return_WE[1]['P_NM'], return_WE[2]['P_NM'], return_WE[3]['P_NM']]
+                vote = [vote_to_int(return_WE[0]['VOTE_CN']), vote_to_int(return_WE[1]['VOTE_CN']), vote_to_int(return_WE[2]['VOTE_CN']), vote_to_int(return_WE[3]['VOTE_CN'])]
+                total = all_WE
+                percent = [round(vote_to_int(return_WE[0]['VOTE_CN']) / all_WE * 100, 2),
+                            round(vote_to_int(return_WE[1]['VOTE_CN']) / all_WE * 100, 2),
+                            round(vote_to_int(return_WE[2]['VOTE_CN']) / all_WE * 100, 2),
+                            round(vote_to_int(return_WE[3]['VOTE_CN']) / all_WE * 100, 2)]
+                color = [team_to_color(return_WE[0]['T_NM']), team_to_color(return_WE[1]['T_NM']), team_to_color(return_WE[2]['T_NM']), team_to_color(return_WE[3]['T_NM'])]
+                picture = [pic_to_url(return_WE[0]['P_IMG_LK']), pic_to_url(return_WE[1]['P_IMG_LK']), pic_to_url(return_WE[2]['P_IMG_LK']), pic_to_url(return_WE[3]['P_IMG_LK'])]
+            
+            return render_template('OF.html', pos=pos, dr_nm=dr_nm, 
+                            team=team, player=player, vote=vote, 
+                            total_vote=total, percent=percent, 
+                            color=color, picture=picture, pos_text=pos_text, 
+                            team_text=team_text, pos_dict=pos_dict) 
+        
         if dr_nm == "dr":
             team = [return_EA[0]['T_NM'], return_EA[1]['T_NM']]
             player = [return_EA[0]['P_NM'], return_EA[1]['P_NM']]
@@ -111,22 +193,7 @@ def home():
             percent = [round(vote_to_int(return_WE[0]['VOTE_CN']) / all_WE * 100, 2), round(vote_to_int(return_WE[1]['VOTE_CN']) / all_WE * 100, 2)]
             color = [team_to_color(return_WE[0]['T_NM']), team_to_color(return_WE[1]['T_NM'])]
             picture = [pic_to_url(return_WE[0]['P_IMG_LK']), pic_to_url(return_WE[1]['P_IMG_LK'])]
-            
-        pos_dict = {
-            "C": "포수",
-            "1B": "1루수",
-            "2B": "2루수",
-            "3B": "3루수",
-            "SS": "유격수",
-            "OF": "외야수",
-            "DH": "지명타자",
-            "SP": "선발투수",
-            "MP": "구원투수",
-            "CP": "마무리투수",
-        }
         
-        pos_text = code_to_pos(pos)
-        team_text = "드림팀" if dr_nm == "dr" else "나눔팀"
         return render_template('index.html', pos=pos, dr_nm=dr_nm, 
                             team=team, player=player, vote=vote, 
                             total_vote=total, percent=percent, 
